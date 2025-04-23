@@ -23,6 +23,7 @@ import functools
 import vim
 import importlib
 import typing
+import time
 
 from vimspector import ( breakpoints,
                          code,
@@ -126,6 +127,10 @@ class DebugSession( object ):
     self.name = session_name
     self.parent_session = parent_session
     self.child_sessions = []
+
+    # times for processing
+    self.start_time = None
+    self.stop_time = None
 
     if parent_session:
       parent_session.child_sessions.append( self )
@@ -810,6 +815,9 @@ class DebugSession( object ):
     if threadId is None:
       return
 
+    # Get our current time for displaying when it stops
+    self.start_time = time.time()
+
     def handler( *_ ):
       self._stackTraceView.OnContinued( self, { 'threadId': threadId } )
       self.ClearCurrentPC()
@@ -831,6 +839,9 @@ class DebugSession( object ):
     if threadId is None:
       return
 
+    # Get our current time for displaying when it stops
+    self.start_time = time.time()
+
     def handler( *_ ):
       self._stackTraceView.OnContinued( self, { 'threadId': threadId } )
       self.ClearCurrentPC()
@@ -851,6 +862,9 @@ class DebugSession( object ):
     threadId = self._stackTraceView.GetCurrentThreadId()
     if threadId is None:
       return
+
+    # Get our current time for displaying when it stops
+    self.start_time = time.time()
 
     def handler( *_ ):
       self._stackTraceView.OnContinued( self, { 'threadId': threadId } )
@@ -882,6 +896,9 @@ class DebugSession( object ):
     if threadId is None:
       utils.UserMessage( 'No current thread', persist = True )
       return
+
+    # Get our current time for displaying when it stops
+    self.start_time = time.time()
 
     def handler( msg ):
       self._stackTraceView.OnContinued( self, {
@@ -1507,6 +1524,7 @@ class DebugSession( object ):
     return True
 
   def _StartDebugAdapter( self ):
+    self.stop_time = time.time()
     self._splash_screen = utils.DisplaySplash(
       self._api_prefix,
       self._splash_screen,
@@ -2196,6 +2214,7 @@ class DebugSession( object ):
       self._outputView.OnOutput( message[ 'body' ] )
 
   def OnEvent_stopped( self, message ):
+    self.stop_time = time.time()
     event = message[ 'body' ]
     reason = event.get( 'reason' ) or '<protocol error>'
     description = event.get( 'description' )
@@ -2212,7 +2231,15 @@ class DebugSession( object ):
     msg = 'Paused in thread {0} due to {1}'.format(
       event.get( 'threadId', '<unknown>' ),
       explanation )
+
+    # show processing time if we have an associated start time
+    if self.start_time is not None:
+        processing_time = self.stop_time - self.start_time
+        msg += f': processing time {processing_time}'
     utils.UserMessage( msg )
+
+    # Clear the start time so we don't use it again
+    self.start_time = None
 
     if self._outputView:
       self._outputView.Print( 'server', msg )

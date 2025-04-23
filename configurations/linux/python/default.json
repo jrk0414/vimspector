@@ -1,0 +1,26 @@
+{
+  "configurations" : {
+    "simple_file_only": {
+      "adapter": "debugpy",
+      "filetypes": [ "python" ],
+      "default": true,
+      "configuration": {
+        "request": "launch",
+        "program": "${workspaceRoot}/${relativeFile}",
+        "cwd": "${workspaceRoot}/${relativeFileDirname}/",
+        "stopOnEntry": true,
+        "console": "integratedTerminal",
+        "args": [ "*${CommandLineArgs}" ]
+      },
+      "breakpoints": {
+        "exception": {
+          "raised": "N",
+          "caught": "N",
+          "uncaught": "Y",
+          "userUnhandled": "N"
+        }
+      }
+    }
+  }
+}
+
